@@ -109,6 +109,12 @@ textarea{background:var(--wood-1);border:1px solid var(--line-2);border-radius:8
 /* ===== swing ===== */
 canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--wood-0);display:block}
 .verdict{font-family:'Fraunces',serif;font-size:22px;margin:10px 0 2px}
+.pedago{background:var(--wood-1);border-left:3px solid var(--brass);border-radius:0 10px 10px 0;
+  padding:12px 16px;margin-top:12px;font-size:13.5px;color:var(--skin-dim)}
+.pedago h4{margin:0 0 6px;font-family:'Fraunces',serif;font-size:15px;color:var(--skin)}
+.pedago ol{margin:6px 0 0;padding-left:20px}
+.pedago li{margin-bottom:5px}
+.pedago .cnt-ex{font-family:ui-monospace,Menlo,Consolas,monospace;color:var(--brass-soft)}
 .verdict b{color:var(--brass-soft)}
 .note{font-size:12.5px;color:var(--skin-faint)}
 .badge-ok{color:var(--ok)} .badge-bad{color:var(--bad)}
@@ -132,6 +138,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
   <div class="tgroup">
     <button class="tbtn play" id="btnPlay">▶ Lecture</button>
     <button class="tbtn" data-tab="grille">Grille</button>
+    <button class="tbtn" data-tab="bib">Bibliothèque</button>
     <button class="tbtn" data-tab="parcours">Parcours</button>
     <button class="tbtn" data-tab="swing">Swing (audio)</button>
     <button class="tbtn" data-tab="io">Import / Export</button>
@@ -144,6 +151,19 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 <div class="tabpane show" id="pane-grille">
   <div class="card">
     <h2 id="gTitle">Groove</h2>
+    <div class="row" style="margin:6px 0 12px">
+      <label class="ctl">Titre <input type="text" id="fTitle" style="width:180px"></label>
+      <label class="ctl">Type
+        <select id="fType" style="width:110px">
+          <option value="groove">Groove</option>
+          <option value="chanson">Chanson</option>
+          <option value="exercice">Exercice</option>
+        </select></label>
+      <label class="ctl">Style / région <input type="text" id="fStyle" placeholder="rumba, funk, Pérou…" style="width:150px"></label>
+      <label class="ctl">YouTube <input type="text" id="fUrl" placeholder="https://youtu.be/…" style="width:190px"></label>
+      <a id="fGo" class="chip hidden" target="_blank" rel="noopener" style="text-decoration:none">▶ voir le tuto</a>
+      <button class="sbtn" id="btnSaveLib">💾 Enregistrer</button>
+    </div>
     <div class="sub">Clic sur une case = changer la frappe (∅ → B → S → s). Clic sur R/L = changer de main. <span id="swingTag"></span></div>
     <div class="gridzone" id="grid"></div>
     <div class="legend">
@@ -183,6 +203,31 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
   </div>
 </div>
 
+<!-- ============ BIBLIOTHÈQUE ============ -->
+<div class="tabpane" id="pane-bib">
+  <div class="card">
+    <h2>Bibliothèque</h2>
+    <div class="sub">Vos grooves enregistrés dans ce navigateur. Exportez le fichier pour sauvegarder ou passer sur un autre appareil.</div>
+    <div class="row" style="margin-bottom:12px">
+      <label class="ctl">Type
+        <select id="bibType" style="width:120px">
+          <option value="">Tous</option>
+          <option value="groove">Grooves</option>
+          <option value="chanson">Chansons</option>
+          <option value="exercice">Exercices</option>
+        </select></label>
+      <label class="ctl">Recherche <input type="text" id="bibQ" placeholder="titre, style, région…" style="width:200px"></label>
+      <span style="flex:1"></span>
+      <span class="note" id="cloudStatus">☁ …</span>
+      <button class="chip" id="btnSync">☁ Synchroniser</button>
+      <button class="chip" id="btnLibExport">Exporter la bibliothèque</button>
+      <button class="chip" id="btnLibImport">Importer</button>
+      <input type="file" id="libFile" accept=".json" class="hidden">
+    </div>
+    <div id="bibList"></div>
+  </div>
+</div>
+
 <!-- ============ PARCOURS ============ -->
 <div class="tabpane" id="pane-parcours">
   <div class="card">
@@ -213,6 +258,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
       <canvas id="cvHist" height="150"></canvas>
       <div class="verdict" id="swVerdict"></div>
       <div class="note" id="swDetail"></div>
+      <div class="pedago hidden" id="swPedago"></div>
       <div class="row" style="margin-top:10px">
         <button class="sbtn" id="btnApplySwing">Appliquer ce swing au lecteur</button>
       </div>
@@ -262,6 +308,7 @@ function emptyMeasure(){ return Array.from({length:16},emptyCell); }
 
 const DEMO = {
   title:"Groove d'exemple (tuto)",
+  type:"groove", style:"", url:"",
   bpm:90, swing:50,
   measures:[[
     {v:"B",h:"R"},{v:"S",h:"L"},{v:"s",h:"R"},{v:"S",h:"L"},
@@ -272,6 +319,7 @@ const DEMO = {
 };
 
 let groove = load("cajon.groove") || JSON.parse(JSON.stringify(DEMO));
+let LIB = load("cajon.lib") || [];
 let P = Object.assign({tempo:groove.bpm||90, swing:groove.swing||50, vol:.85,
   ghost:true, slap:true, bass:true, handsOnly:false, click:false,
   loopA:0, loopB:3}, load("cajon.player")||{});
@@ -455,6 +503,11 @@ function buildSteps(){
     cfg:{tempo:slow,ghost:true,slap:true,bass:true,handsOnly:false,click:true,loopA:Math.min(2,nbT-1),loopB:Math.min(3,nbT-1)}});
   steps.push({t:"Groove complet lent",d:"Tout le groove, ghosts inclus, à "+slow+" bpm. Propreté avant vitesse.",
     cfg:{tempo:slow,ghost:true,slap:true,bass:true,handsOnly:false,click:true,loopA:0,loopB:nbT-1}});
+  if(P.swing>51){
+    const a=swingAdvice(P.swing);
+    steps.push({t:"Apprivoiser le swing ("+P.swing+"%)",d:a.short+" Comparez : jouez d'abord 2 mesures avec le curseur à 50%, puis au swing réel. Détail complet dans l'onglet Swing.",
+      cfg:{tempo:slow,ghost:true,slap:true,bass:true,handsOnly:false,click:true,loopA:0,loopB:nbT-1}});
+  }
   steps.push({t:"Palier "+mid+" bpm",d:"Monter à ~80% du tempo cible. Si ça accroche, redescendre un cran.",
     cfg:{tempo:mid,ghost:true,slap:true,bass:true,handsOnly:false,click:true,loopA:0,loopB:nbT-1}});
   steps.push({t:"Tempo cible "+tgt+" bpm",d:"Le groove final, métronome coupé — c'est vous le métronome."+(P.swing>51?" Swing "+P.swing+"% actif.":""),
@@ -494,7 +547,7 @@ function syncControls(){
 function setChip(id,on){ byId(id).classList.toggle("on",!!on); }
 function bindControls(){
   byId("tempo").oninput=e=>{ P.tempo=+e.target.value; byId("tempoV").textContent=P.tempo; persist(); };
-  byId("swing").oninput=e=>{ P.swing=+e.target.value; byId("swingV").textContent=P.swing; persist(); renderGrid(); };
+  byId("swing").oninput=e=>{ P.swing=+e.target.value; byId("swingV").textContent=P.swing; persist(); renderGrid(); renderSteps(); };
   byId("vol").oninput=e=>{ P.vol=e.target.value/100; if(master)master.gain.value=P.vol; persist(); };
   [["mGhost","ghost"],["mSlap","slap"],["mBass","bass"],["mHands","handsOnly"],["mClick","click"]]
     .forEach(([id,k])=>{ byId(id).onclick=()=>{ P[k]=!P[k]; persist(); syncControls(); renderGrid(); }; });
@@ -513,9 +566,123 @@ function bindControls(){
       document.querySelectorAll(".tabpane").forEach(p=>p.classList.remove("show"));
       byId("pane-"+b.dataset.tab).classList.add("show");
       if(b.dataset.tab==="io") refreshJson();
+      if(b.dataset.tab==="bib") renderLib();
     };
   });
   document.querySelector('[data-tab="grille"]').classList.add("on");
+}
+
+/* ---------------- cloud (Supabase) ---------------- */
+const SB_URL="https://hifqtzxhmboxbruraiab.supabase.co";
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhpZnF0enhobWJveGJydXJhaWFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMwMjgwMzcsImV4cCI6MjA5ODYwNDAzN30.5UDvijZCHWdMjy6VVfOzt3r_txxXpqSDn9u1khtgHqU";
+const SB_H={apikey:SB_KEY,Authorization:"Bearer "+SB_KEY,"Content-Type":"application/json"};
+const SB_T=SB_URL+"/rest/v1/cajon_grooves";
+function toRow(g){ return {id:g.id,title:g.title||"Sans titre",type:g.type||"groove",style:g.style||"",
+  url:g.url||"",bpm:g.bpm||90,swing:g.swing||50,measures:g.measures,updated_at:new Date().toISOString()}; }
+function fromRow(r){ return {id:r.id,title:r.title,type:r.type,style:r.style,url:r.url,
+  bpm:+r.bpm,swing:+r.swing,measures:r.measures,savedAt:(r.saved_at||"").slice(0,10)}; }
+function setCloudStatus(ok,n){ const el=byId("cloudStatus");
+  el.textContent=ok?("☁ "+n+" grooves en ligne"):"☁ hors-ligne";
+  el.style.color=ok?"var(--ok)":"var(--skin-faint)"; }
+async function syncCloud(manual){
+  try{
+    const toPush=LIB.filter(g=>g.id&&g.measures);
+    if(toPush.length){
+      const r=await fetch(SB_T,{method:"POST",
+        headers:Object.assign({Prefer:"resolution=merge-duplicates"},SB_H),
+        body:JSON.stringify(toPush.map(toRow))});
+      if(!r.ok) throw "HTTP "+r.status;
+    }
+    const r2=await fetch(SB_T+"?select=*&order=title",{headers:SB_H});
+    if(!r2.ok) throw "HTTP "+r2.status;
+    const rows=await r2.json();
+    LIB=rows.map(fromRow); save("cajon.lib",LIB); renderLib();
+    setCloudStatus(true,rows.length);
+    if(manual) toast("Synchronisé — "+rows.length+" grooves dans le cloud");
+  }catch(e){ setCloudStatus(false); if(manual) toast("⚠ Sync impossible ("+e+") — la bibliothèque reste locale"); }
+}
+async function cloudDelete(id){
+  try{ await fetch(SB_T+"?id=eq."+encodeURIComponent(id),{method:"DELETE",headers:SB_H}); }catch(e){}
+}
+
+/* ---------------- fiche + bibliothèque ---------------- */
+function syncFiche(){
+  byId("fTitle").value=groove.title||"";
+  byId("fType").value=groove.type||"groove";
+  byId("fStyle").value=groove.style||"";
+  byId("fUrl").value=groove.url||"";
+  const go=byId("fGo");
+  if(groove.url&&/^https?:\/\//.test(groove.url)){ go.href=groove.url; go.classList.remove("hidden"); }
+  else go.classList.add("hidden");
+}
+function bindFiche(){
+  byId("fTitle").onchange=e=>{ groove.title=e.target.value; persist(); renderGrid(); };
+  byId("fType").onchange=e=>{ groove.type=e.target.value; persist(); };
+  byId("fStyle").onchange=e=>{ groove.style=e.target.value; persist(); };
+  byId("fUrl").onchange=e=>{ groove.url=e.target.value.trim(); persist(); syncFiche(); };
+  byId("btnSaveLib").onclick=()=>{
+    groove.title=byId("fTitle").value||groove.title||"Sans titre";
+    groove.type=byId("fType").value; groove.style=byId("fStyle").value; groove.url=byId("fUrl").value.trim();
+    if(!groove.id) groove.id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+    groove.bpm=P.tempo; groove.swing=P.swing; groove.savedAt=new Date().toISOString().slice(0,10);
+    const i=LIB.findIndex(g=>g.id===groove.id);
+    const copy=JSON.parse(JSON.stringify(groove));
+    if(i>=0) LIB[i]=copy; else LIB.push(copy);
+    save("cajon.lib",LIB); persist(); renderLib();
+    toast("« "+groove.title+" » enregistré ("+LIB.length+" grooves)");
+    syncCloud(false);
+  };
+}
+function renderLib(){
+  const z=byId("bibList"); if(!z) return;
+  const ty=byId("bibType").value, q=(byId("bibQ").value||"").toLowerCase();
+  const items=LIB.filter(g=>(!ty||g.type===ty)&&(!q||((g.title||"")+" "+(g.style||"")).toLowerCase().includes(q)));
+  z.innerHTML="";
+  if(!items.length){ z.innerHTML='<div class="note">Rien ici pour l\'instant — ouvrez un groove dans la grille et cliquez « 💾 Enregistrer ».</div>'; return; }
+  const TYPES={groove:"Groove",chanson:"Chanson",exercice:"Exercice"};
+  items.slice().sort((a,b)=>(a.title||"").localeCompare(b.title||"")).forEach(g=>{
+    const div=document.createElement("div"); div.className="step";
+    const meta=[TYPES[g.type]||"Groove", g.style, g.bpm?g.bpm+" bpm":"", g.swing>51?"swing "+g.swing+"%":"", g.measures.length+" mes.", g.savedAt].filter(Boolean).join(" · ");
+    div.innerHTML='<div class="num">♪</div><div class="bd"><h3>'+(g.title||"Sans titre")+'</h3><p>'+meta+'</p></div>';
+    const acts=document.createElement("div"); acts.className="acts";
+    if(g.url&&/^https?:\/\//.test(g.url)){
+      const yt=document.createElement("a"); yt.className="dbtn"; yt.textContent="▶ YouTube";
+      yt.href=g.url; yt.target="_blank"; yt.rel="noopener"; yt.style.textDecoration="none";
+      acts.appendChild(yt);
+    }
+    const op=document.createElement("button"); op.className="sbtn"; op.textContent="Ouvrir";
+    op.onclick=()=>{ stopPlay(); groove=JSON.parse(JSON.stringify(g));
+      P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=totalSteps()/4-1;
+      persist(); renderAll(); document.querySelector('[data-tab="grille"]').click();
+      toast("« "+(g.title||"Sans titre")+" » chargé"); };
+    const del=document.createElement("button"); del.className="dbtn"; del.textContent="🗑";
+    del.onclick=()=>{ if(confirm("Supprimer « "+(g.title||"Sans titre")+" » ?")){
+      LIB=LIB.filter(x=>x.id!==g.id); save("cajon.lib",LIB); renderLib(); cloudDelete(g.id); } };
+    acts.appendChild(op); acts.appendChild(del); div.appendChild(acts);
+    z.appendChild(div);
+  });
+}
+function bindLib(){
+  byId("btnSync").onclick=()=>syncCloud(true);
+  byId("bibType").onchange=renderLib;
+  byId("bibQ").oninput=renderLib;
+  byId("btnLibExport").onclick=()=>{
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(LIB,null,1)],{type:"application/json"}));
+    a.download="bibliotheque_cajon.json"; a.click();
+  };
+  byId("btnLibImport").onclick=()=>byId("libFile").click();
+  byId("libFile").onchange=async e=>{
+    try{
+      const arr=JSON.parse(await e.target.files[0].text());
+      if(!Array.isArray(arr)) throw "format invalide";
+      let n=0;
+      arr.forEach(g=>{ if(g&&g.measures){ const i=LIB.findIndex(x=>x.id===g.id);
+        if(i>=0)LIB[i]=g; else LIB.push(g); n++; } });
+      save("cajon.lib",LIB); renderLib(); toast(n+" grooves importés");
+    }catch(err){ toast("⚠ "+err); }
+    e.target.value="";
+  };
 }
 
 /* ---------------- import / export ---------------- */
@@ -582,8 +749,8 @@ function bindSwing(){
   byId("btnApplySwing").onclick=()=>{
     if(!swingRes) return;
     P.swing=Math.round(Math.min(75,Math.max(50,swingRes.ratio*100)));
-    persist(); syncControls(); renderGrid();
-    toast("Swing du lecteur réglé à "+P.swing+"%");
+    persist(); syncControls(); renderGrid(); renderSteps();
+    toast("Swing du lecteur réglé à "+P.swing+"% — étape ajoutée au parcours");
   };
   byId("btnPrevA").onclick=()=>{
     if(prevSrc){ try{prevSrc.stop();}catch(e){} prevSrc=null; byId("btnPrevA").textContent="▶ écouter l'extrait"; return; }
@@ -663,6 +830,44 @@ function computeSwing(){
   swingRes={ratio,nOn:on.length,nOff:offb.length,spread,bpm,eighth,t0};
   drawTimeline(); drawHist(); showVerdict();
 }
+/* --- pédagogie du swing : traduire la valeur en consigne de jeu --- */
+function swingAdvice(pct){
+  if(pct<=54) return {
+    short:"Jouer binaire strict : toutes les doubles-croches égales, au métronome.",
+    title:"Comment le jouer : débit droit ("+pct+"%)",
+    howto:[
+      "Comptez <span class='cnt-ex'>1 e & a</span> parfaitement régulier — chaque double a la même durée.",
+      "Métronome sur les doubles d'abord (vitesse ÷2), puis seulement sur les temps.",
+      "Piège classique : laisser traîner les ghosts. Ici ils tombent pile sur la subdivision."
+    ]};
+  if(pct<=61) return {
+    short:"Swing léger : ne pas le « calculer » — retarder à peine les e/a, comme un rebond.",
+    title:"Comment le jouer : swing léger ("+pct+"%)",
+    howto:[
+      "Ne comptez PAS en triolets — c'est trop. Gardez <span class='cnt-ex'>1 e & a</span> mais laissez les <span class='cnt-ex'>e</span> et <span class='cnt-ex'>a</span> arriver un souffle en retard.",
+      "Pensez « rebond » : la main retombe naturellement un peu tard, sans forcer.",
+      "Exercice A/B : jouez 2 mesures à 50% (curseur), puis 2 mesures au swing mesuré — l'oreille doit entendre la différence, pas la calculer.",
+      "Alternez avec l'extrait original en boucle : imitez, ne quantifiez pas."
+    ]};
+  if(pct<=70) return {
+    short:"Swing ternaire : compter en triolets, les e/a se jouent sur la 3e partie du triolet.",
+    title:"Comment le jouer : ternaire ("+pct+"%)",
+    howto:[
+      "Changez de comptage : <span class='cnt-ex'>1-et-te 2-et-te</span> (triolets). Les doubles « e/a » de la grille tombent sur le <span class='cnt-ex'>-te</span>.",
+      "Étape 1 : frappez les triolets complets en alternant les mains, accent sur le temps.",
+      "Étape 2 : supprimez la note du milieu — il reste exactement le squelette swingué du groove.",
+      "Étape 3 : replacez B/S/s de la grille sur ce squelette, lentement, puis remontez le tempo."
+    ]};
+  return {
+    short:"Swing très marqué : contretemps collé au temps suivant, presque en levée.",
+    title:"Comment le jouer : swing très marqué ("+pct+"%)",
+    howto:[
+      "Le contretemps se joue très tard — presque une levée du temps suivant (rythme pointé).",
+      "Pensez <span class='cnt-ex'>1..a-2..a-3</span> : le « a » lance le temps qui suit, comme un appel.",
+      "Travaillez par paires : temps + levée, en insistant sur la sensation d'élan vers l'avant.",
+      "Vérifiez avec l'extrait original : à ce niveau, c'est souvent un vrai rythme pointé écrit, pas un feel."
+    ]};
+}
 function showVerdict(){
   const r=swingRes, pct=Math.round(r.ratio*100);
   let label, cls="badge-ok";
@@ -676,6 +881,13 @@ function showVerdict(){
     r.nOff+" attaques à contretemps · "+r.nOn+" sur le temps · dispersion ±"+Math.round(r.spread*100)+
     "% <span class='"+cls+"'>"+(r.spread<0.07?"mesure fiable":"mesure bruitée — ajustez BPM / décalage")+"</span>"+
     "<br>Rappel : 50% = binaire strict · 67% = triolet parfait.";
+  const ped=byId("swPedago");
+  if(r.nOff<3){ ped.classList.add("hidden"); }
+  else{
+    const a=swingAdvice(pct);
+    ped.innerHTML="<h4>"+a.title+"</h4><ol>"+a.howto.map(l=>"<li>"+l+"</li>").join("")+"</ol>";
+    ped.classList.remove("hidden");
+  }
 }
 function drawTimeline(){
   const cv=byId("cvTime"), g=cv.getContext("2d");
@@ -734,9 +946,9 @@ function drawHist(){
 let msgT=null;
 function toast(s){ const m=byId("msg"); m.textContent=s; m.classList.add("show");
   clearTimeout(msgT); msgT=setTimeout(()=>m.classList.remove("show"),2600); }
-function renderAll(){ syncControls(); renderGrid(); renderSteps(); refreshJson(); }
+function renderAll(){ syncControls(); syncFiche(); renderGrid(); renderSteps(); refreshJson(); renderLib(); }
 
-bindControls(); bindIO(); bindSwing(); renderAll();
+bindControls(); bindIO(); bindSwing(); bindFiche(); bindLib(); renderAll(); syncCloud(false);
 </script>
 </body>
 </html>

@@ -150,7 +150,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 <div class="topbar">
   <div class="brand">
     <span class="name">Atelier <b>Cajón</b></span>
-    <span class="tag">tutos youtube → exercices · v1.3</span>
+    <span class="tag">tutos youtube → exercices · v1.4</span>
   </div>
   <div class="spacer"></div>
   <div class="tgroup">
@@ -160,6 +160,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
     <button class="tbtn" data-tab="parcours">Parcours</button>
     <button class="tbtn" data-tab="swing">Swing (audio)</button>
     <button class="tbtn" data-tab="io">Import / Export</button>
+    <button class="tbtn" id="btnFs" title="Plein écran — l'écran reste allumé pendant la lecture">⛶</button>
   </div>
 </div>
 
@@ -450,11 +451,13 @@ function startPlay(){
   curStep=loopRange()[0]; nextT=c.currentTime+0.08;
   timer=setInterval(schedule,25); requestAnimationFrame(draw);
   byId("btnPlay").classList.add("on"); byId("btnPlay").textContent="■ Stop";
+  wakeUpdate();
 }
 function stopPlay(){
   playing=false; clearInterval(timer); drawQ.length=0;
   document.querySelectorAll(".cell.now").forEach(x=>x.classList.remove("now","hit"));
   byId("btnPlay").classList.remove("on"); byId("btnPlay").textContent="▶ Lecture";
+  wakeUpdate();
 }
 
 /* ---------------- rendu grille ---------------- */
@@ -553,7 +556,20 @@ function buildSteps(){
     cfg:{tempo:tgt,ghost:true,slap:true,bass:true,handsOnly:false,click:false,loopA:0,loopB:nbT-1}});
   return steps;
 }
-function stepKey(){ return "cajon.done."+(groove.title||"sans-titre"); }
+function stepKey(){
+  // v1.4 : progression indexée sur l'id (stable au renommage) — bug relevé par le panel (Olivier)
+  if(groove.id){
+    const k="cajon.done."+groove.id, legacy="cajon.done."+(groove.title||"sans-titre");
+    try{
+      if(localStorage.getItem(k)===null && localStorage.getItem(legacy)!==null){
+        localStorage.setItem(k,localStorage.getItem(legacy));
+        localStorage.removeItem(legacy);
+      }
+    }catch(e){}
+    return k;
+  }
+  return "cajon.done."+(groove.title||"sans-titre");
+}
 function renderSteps(){
   const steps=buildSteps(), doneArr=load(stepKey())||[];
   const z=byId("steps"); z.innerHTML="";
@@ -999,6 +1015,32 @@ function drawHist(){
   g.beginPath(); g.moveTo(swingRes.ratio*W,30); g.lineTo(swingRes.ratio*W,H-24); g.stroke();
 }
 
+/* ---------------- plein écran + wake lock (v1.4 — port metronomefunk, C14 panel) ---------------- */
+let wakeLock=null;
+async function wakeAcquire(){
+  if(wakeLock || !("wakeLock" in navigator)) return;
+  try{
+    wakeLock=await navigator.wakeLock.request("screen");
+    wakeLock.addEventListener("release",()=>{ wakeLock=null; });
+  }catch(e){ wakeLock=null; }
+}
+function wakeRelease(){ if(wakeLock){ try{wakeLock.release();}catch(e){} wakeLock=null; } }
+function wakeUpdate(){ (playing||document.fullscreenElement) ? wakeAcquire() : wakeRelease(); }
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") wakeUpdate(); });
+function bindFullscreen(){
+  const b=byId("btnFs"); if(!b) return;
+  if(!document.documentElement.requestFullscreen){ b.classList.add("hidden"); return; }
+  b.onclick=()=>{
+    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+    else document.documentElement.requestFullscreen().catch(()=>{});
+  };
+  document.addEventListener("fullscreenchange",()=>{
+    b.classList.toggle("on",!!document.fullscreenElement);
+    b.title=document.fullscreenElement?"Quitter le plein écran":"Plein écran — l'écran reste allumé pendant la lecture";
+    wakeUpdate();
+  });
+}
+
 /* ---------------- divers ---------------- */
 let msgT=null;
 function toast(s,actionLabel,actionFn){
@@ -1013,7 +1055,7 @@ function toast(s,actionLabel,actionFn){
 }
 function renderAll(){ syncControls(); syncFiche(); renderGrid(); renderSteps(); refreshJson(); renderLib(); }
 
-bindControls(); bindIO(); bindSwing(); bindFiche(); bindLib(); renderAll(); syncCloud(false);
+bindControls(); bindIO(); bindSwing(); bindFiche(); bindLib(); bindFullscreen(); renderAll(); syncCloud(false);
 </script>
 </body>
 </html>

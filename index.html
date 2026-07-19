@@ -143,6 +143,17 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 .lex .lexbd p:last-child{margin-bottom:0}
 .lex .lexbd b.B{color:var(--bass)} .lex .lexbd b.S{color:var(--slap)} .lex .lexbd b.g{color:var(--ghost)}
 
+/* ===== relecture d'une photo (v1.6) : l'image en face de la grille ===== */
+#relecture .relimg{border:1px solid var(--line-2);border-radius:10px;overflow:hidden;background:var(--wood-0)}
+#relecture .relimg.agrandie{overflow:auto;max-height:72vh}
+#relecture img{width:100%;display:block;cursor:zoom-in}
+#relecture img.agrandie{width:auto;max-width:none;cursor:zoom-out}
+#relecture .etape{font-family:'Fraunces',serif;font-size:15px;color:var(--brass-soft);margin-bottom:8px}
+/* case sur laquelle les deux lecteurs divergent : c'est là qu'il faut regarder */
+.cell.doute .cv{box-shadow:inset 0 0 0 2px var(--ghost)}
+.cell.doute .cv::after{content:"?";position:absolute;margin:-22px 0 0 20px;font-size:10px;color:var(--ghost)}
+.cv{position:relative}
+
 /* ===== cibles tactiles : tablettes ET téléphones (C17 — le palier 640 ratait les tablettes) ===== */
 @media (max-width:900px){
   /* valeurs calées sur mesure réelle au navigateur : viser 44 px de haut, pas l'espérer */
@@ -182,6 +193,13 @@ body.zoom .legend{font-size:15px;margin-top:8px}
   body.zoom .cnt div{font-size:16px}
   body.zoom .hb{font-size:16px}
 }
+
+/* en relecture, la photo est EN FACE de la grille — et reste visible pendant qu'on corrige.
+   En dessous de 1000 px elle passe simplement au-dessus, l'ordre du HTML suffit. */
+@media (min-width:1000px){
+  #pane-grille.relec{display:grid;grid-template-columns:minmax(300px,38%) 1fr;gap:18px;align-items:start}
+  #pane-grille.relec #relecture{position:sticky;top:74px;margin-bottom:0}
+}
 </style>
 </head>
 <body>
@@ -189,7 +207,7 @@ body.zoom .legend{font-size:15px;margin-top:8px}
 <div class="topbar">
   <div class="brand">
     <span class="name">Atelier <b>Cajón</b></span>
-    <span class="tag">tutos youtube → exercices · v1.5</span>
+    <span class="tag">tutos youtube → exercices · v1.6</span>
   </div>
   <div class="spacer"></div>
   <div class="tgroup">
@@ -207,6 +225,22 @@ body.zoom .legend{font-size:15px;margin-top:8px}
 
 <!-- ============ GRILLE ============ -->
 <div class="tabpane show" id="pane-grille">
+
+  <!-- relecture d'une photo importée : l'image reste sous les yeux pendant la correction -->
+  <div class="card hidden" id="relecture">
+    <div class="etape" id="relEtape"></div>
+    <h2>Vérifier la lecture</h2>
+    <div class="sub">Comparez la grille à la photo. Cliquez une case pour la corriger, ou lancez la lecture pour vérifier à l'oreille.</div>
+    <div class="relimg"><img id="relImg" alt="Photo du tuto importée" title="Cliquer pour agrandir"></div>
+    <div class="note" id="relNote" style="margin-top:10px"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="sbtn" id="relOk">✓ Enregistrer</button>
+      <button class="chip" id="relSkip">Passer</button>
+      <button class="chip" id="relStop">Fermer</button>
+    </div>
+  </div>
+
+  <div id="gCol">
   <div class="card">
     <h2 id="gTitle">Groove</h2>
     <div class="row" id="gFiche" style="margin:6px 0 12px">
@@ -270,6 +304,7 @@ body.zoom .legend{font-size:15px;margin-top:8px}
       <label class="ctl">Boucle : temps <select id="loopA"></select> → <select id="loopB"></select></label>
       <button class="chip" id="loopAll">Tout</button>
     </div>
+  </div>
   </div>
 </div>
 
@@ -339,6 +374,14 @@ body.zoom .legend{font-size:15px;margin-top:8px}
 <!-- ============ IMPORT / EXPORT ============ -->
 <div class="tabpane" id="pane-io">
   <div class="card">
+    <h2>Depuis une photo</h2>
+    <div class="sub">Photographiez la grille d'un tuto, ou déposez une capture d'écran. Les frappes et les mains sont lues automatiquement — vous vérifiez et corrigez avant d'enregistrer.</div>
+    <div class="filedrop" id="dropPhoto">📷 Prendre une photo, ou choisir une image
+      <input type="file" id="photoFile" accept="image/*" class="hidden"></div>
+    <div class="note" style="margin-top:8px">Cadrez au plus près de la grille : c'est ce qui donne la lecture la plus sûre. Une page entière de méthode fonctionne aussi, mais moins bien. Si la page contient plusieurs grilles, elles sont toutes lues, l'une après l'autre.</div>
+    <div class="note hidden" id="photoEtat" style="margin-top:8px"></div>
+  </div>
+  <div class="card">
     <h2>Import rapide (format tuto)</h2>
     <div class="sub">Collez la grille comme dans la vidéo : une lettre par double-croche (B, S, s, ou « . » pour un silence), un bloc par temps. 2<sup>e</sup> ligne optionnelle : les mains.</div>
     <textarea id="quick" placeholder="BSsS BsSB BsSB BSsS&#10;RLRL RLRL RLRL RLRL"></textarea>
@@ -347,7 +390,7 @@ body.zoom .legend{font-size:15px;margin-top:8px}
       <label class="ctl">BPM <input type="number" id="qBpm" value="90"></label>
       <button class="sbtn" id="btnQuick">Importer</button>
     </div>
-    <div class="note" style="margin-top:8px">Astuce : envoyez une capture de la grille à Claude, qui vous rend ces deux lignes prêtes à coller — ou directement le JSON ci-dessous.</div>
+    <div class="note" style="margin-top:8px">Utile pour recopier une grille à la main, ou coller celle d'un ami. Pour une capture d'écran, passez plutôt par « Depuis une photo » ci-dessus.</div>
   </div>
   <div class="card">
     <h2>JSON complet</h2>
@@ -547,6 +590,7 @@ function renderGrid(){
   byId("swingTag").innerHTML = P.swing>51 ? '<span class="swtag">swing '+P.swing+'%</span>' : "";
   byId("legHands").innerHTML='<b style="color:var(--hand-d)">'+handLbl("R")+'</b>/<b style="color:var(--hand-g)">'+handLbl("L")+'</b> = Main '+(P.handFr?'droite / gauche':'droite (R) / gauche (L)');
   renderLoopSel();
+  marquerDoutes();   // la grille vient d'être reconstruite : réappliquer les marques de relecture
 }
 function muted(cell){
   if(P.handsOnly) return false;
@@ -558,7 +602,14 @@ function cycleCell(mi,s){
   cell.v = cell.v===null?"B":VOICES[cell.v].next;
   if(cell.v && !cell.h) cell.h = s%2===0?"R":"L";
   if(!cell.v) cell.h=null;
+  // en relecture, une case qu'on vient de trancher n'est plus douteuse :
+  // les marques se comportent comme une liste de contrôle qui se vide
+  if(RELEC){
+    const d=RELEC.grilles[RELEC.i].doute, k=d?d.indexOf(mi*16+s):-1;
+    if(k>=0) d.splice(k,1);
+  }
   persist(); renderGrid(); renderSteps();
+  if(RELEC) majRelecture();
 }
 function renderLoopSel(){
   const nb=groove.measures.length*4;
@@ -725,6 +776,138 @@ async function syncCloud(manual){
 }
 async function cloudDelete(id){
   try{ await fetch(SB_T+"?id=eq."+encodeURIComponent(id),{method:"DELETE",headers:SB_H}); }catch(e){}
+}
+
+/* ---------------- import par photo (v1.6) ----------------
+   La lecture se fait dans une fonction Edge : la clé du service de vision reste
+   côté serveur, l'app n'a rien à configurer. La réponse peut contenir plusieurs
+   grilles (page d'exercices) et, pour chacune, les cases sur lesquelles les deux
+   lecteurs divergent — c'est là que l'œil doit aller en priorité. */
+const FN_TRANSCRIRE = SB_URL+"/functions/v1/transcrire-grille";
+let RELEC = null;   // {url, grilles:[{frappes,mains,doute,corroboree}], i}
+
+function reduireImage(file){
+  // réduire avant l'envoi : moins d'attente, et on affiche EXACTEMENT ce que le service a vu
+  return new Promise(resolve=>{
+    const brut=()=>{ const r=new FileReader();
+      r.onload=()=>{ const s=String(r.result);
+        resolve({b64:s.slice(s.indexOf(",")+1), mime:file.type||"image/jpeg", url:s}); };
+      r.readAsDataURL(file); };
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1600, e=Math.min(1, MAX/Math.max(img.width,img.height));
+      URL.revokeObjectURL(img.src);
+      if(e>=1) return brut();
+      const c=document.createElement("canvas");
+      c.width=Math.round(img.width*e); c.height=Math.round(img.height*e);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      const url=c.toDataURL("image/jpeg",0.92);
+      resolve({b64:url.slice(url.indexOf(",")+1), mime:"image/jpeg", url});
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(img.src); brut(); };
+    img.src=URL.createObjectURL(file);
+  });
+}
+
+async function lirePhoto(file){
+  const et=byId("photoEtat"), z=byId("dropPhoto");
+  et.classList.remove("hidden"); et.textContent="Lecture de la photo en cours… (5 à 10 secondes)";
+  z.style.opacity=".5"; z.style.pointerEvents="none";
+  try{
+    const im=await reduireImage(file);
+    const r=await fetch(FN_TRANSCRIRE,{method:"POST",headers:SB_H,
+      body:JSON.stringify({image:im.b64,mime:im.mime})});
+    const d=await r.json().catch(()=>({}));
+    if(!d.ok) throw new Error(d.erreur||"Lecture impossible pour le moment.");
+    RELEC={url:im.url, grilles:d.grilles, i:0};
+    et.classList.add("hidden");
+    entrerRelecture();
+    toast(d.grilles.length>1 ? d.grilles.length+" grilles lues — vérifiez-les une à une"
+                             : "Grille lue — vérifiez-la avant d'enregistrer");
+  }catch(e){
+    et.textContent="⚠ "+e.message; toast("⚠ "+e.message);
+  }finally{
+    z.style.opacity=""; z.style.pointerEvents=""; byId("photoFile").value="";
+  }
+}
+
+function entrerRelecture(){
+  stopPlay();
+  byId("relImg").src=RELEC.url;
+  byId("relecture").classList.remove("hidden");
+  byId("pane-grille").classList.add("relec");
+  document.querySelector('[data-tab="grille"]').click();
+  chargerGrilleRelue();
+}
+
+function chargerGrilleRelue(){
+  const g=RELEC.grilles[RELEC.i], n=RELEC.grilles.length, mesures=[];
+  pushUndo();
+  for(let m=0;m<g.frappes.length/16;m++){
+    const meas=[];
+    for(let k=0;k<16;k++){
+      const idx=m*16+k, ch=g.frappes[idx];
+      const v = ch==="B"?"B":ch==="S"?"S":ch==="s"?"s":null;
+      let h = g.mains ? g.mains[idx] : null;
+      if(!h || h===".") h=null;
+      meas.push({v, h: v ? (h || (k%2===0?"R":"L")) : null});
+    }
+    mesures.push(meas);
+  }
+  groove={title:(n>1?"Photo — grille "+(RELEC.i+1):"Photo importée"), type:"groove",
+          style:"", url:"", bpm:P.tempo, swing:P.swing, measures:mesures};
+  P.loopA=0; P.loopB=totalSteps()/4-1;
+  persist(); renderAll(); majRelecture();
+}
+
+function majRelecture(){
+  if(!RELEC) return;
+  const n=RELEC.grilles.length, g=RELEC.grilles[RELEC.i], nd=(g.doute||[]).length;
+  byId("relEtape").textContent = n>1 ? "Grille "+(RELEC.i+1)+" sur "+n : "";
+  byId("relNote").innerHTML = nd
+    ? "<b style='color:var(--ghost)'>"+nd+" case"+(nd>1?"s":"")+" à vérifier</b> — cerclée"+(nd>1?"s":"")+" dans la grille : les deux lecteurs ne s'accordent pas. Le marquage disparaît dès que vous touchez la case."
+    : (g.corroboree ? "Les deux lecteurs sont d'accord sur toute la grille."
+                    : "Un seul lecteur a répondu : rien n'a pu être recoupé, relisez l'ensemble.");
+  byId("relOk").textContent = RELEC.i<n-1 ? "✓ Enregistrer et suivante" : "✓ Enregistrer";
+  byId("relSkip").classList.toggle("hidden", RELEC.i>=n-1);
+  marquerDoutes();
+}
+
+function marquerDoutes(){
+  document.querySelectorAll(".cell.doute").forEach(c=>c.classList.remove("doute"));
+  if(!RELEC) return;
+  (RELEC.grilles[RELEC.i].doute||[]).forEach(i=>{
+    const el=document.querySelector('.cell[data-i="'+i+'"]');
+    if(el) el.classList.add("doute");
+  });
+}
+
+function relecSuivante(){
+  if(RELEC.i < RELEC.grilles.length-1){ RELEC.i++; chargerGrilleRelue(); }
+  else sortirRelecture("Import terminé");
+}
+
+function sortirRelecture(message){
+  RELEC=null;
+  byId("relecture").classList.add("hidden");
+  byId("pane-grille").classList.remove("relec");
+  document.querySelectorAll(".cell.doute").forEach(c=>c.classList.remove("doute"));
+  if(message) toast(message);
+}
+
+function bindPhoto(){
+  const z=byId("dropPhoto"), f=byId("photoFile");
+  z.onclick=()=>f.click();
+  z.ondragover=e=>e.preventDefault();
+  z.ondrop=e=>{ e.preventDefault(); if(e.dataTransfer.files[0]) lirePhoto(e.dataTransfer.files[0]); };
+  f.onchange=()=>{ if(f.files[0]) lirePhoto(f.files[0]); };
+  byId("relOk").onclick=()=>{ byId("btnSaveLib").click(); relecSuivante(); };
+  byId("relSkip").onclick=relecSuivante;
+  byId("relStop").onclick=()=>sortirRelecture("");
+  byId("relImg").onclick=e=>{
+    e.target.classList.toggle("agrandie");
+    e.target.parentElement.classList.toggle("agrandie");
+  };
 }
 
 /* ---------------- fiche + bibliothèque ---------------- */
@@ -1117,7 +1300,8 @@ function toast(s,actionLabel,actionFn){
 }
 function renderAll(){ syncControls(); syncFiche(); renderGrid(); renderSteps(); refreshJson(); renderLib(); }
 
-bindControls(); bindIO(); bindSwing(); bindFiche(); bindLib(); bindFullscreen(); renderAll(); syncCloud(false);
+bindControls(); bindIO(); bindSwing(); bindFiche(); bindLib(); bindFullscreen(); bindPhoto();
+renderAll(); syncCloud(false);
 </script>
 </body>
 </html>

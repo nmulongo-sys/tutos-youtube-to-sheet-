@@ -126,22 +126,61 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
   color:var(--skin);border-radius:10px;padding:9px 18px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
 .msgbar.show{opacity:1;pointer-events:auto}
 .msgbar button{background:transparent;border:1px solid var(--brass);color:var(--brass-soft);border-radius:7px;padding:3px 10px;margin-left:10px;font-weight:700}
-.vclick{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+/* saisie chiffrée : lisible comme un contrôle, pas comme un soulignement (C17) */
+.vclick{cursor:pointer;border:1px solid var(--line-2);border-radius:7px;padding:2px 8px;transition:all .15s}
+.vclick::after{content:"✎";margin-left:5px;font-size:11px;opacity:.6}
+.vclick:hover{border-color:var(--brass);color:var(--brass-soft)}
+.vclick:hover::after{opacity:1}
 
-/* ===== responsive (C3 panel) ===== */
+/* ===== lexique dépliable — accessible au doigt, contrairement aux infobulles (C16) ===== */
+.lex{margin-top:10px;border:1px solid var(--line-2);border-radius:10px;background:var(--wood-1)}
+.lex summary{cursor:pointer;padding:11px 14px;font-weight:600;font-size:13.5px;color:var(--brass-soft);list-style:none}
+.lex summary::-webkit-details-marker{display:none}
+.lex summary::before{content:"▸ "}
+.lex[open] summary::before{content:"▾ "}
+.lex .lexbd{padding:0 14px 12px;font-size:13.5px;color:var(--skin-dim)}
+.lex .lexbd p{margin:0 0 9px}
+.lex .lexbd p:last-child{margin-bottom:0}
+.lex .lexbd b.B{color:var(--bass)} .lex .lexbd b.S{color:var(--slap)} .lex .lexbd b.g{color:var(--ghost)}
+
+/* ===== cibles tactiles : tablettes ET téléphones (C17 — le palier 640 ratait les tablettes) ===== */
+@media (max-width:900px){
+  /* valeurs calées sur mesure réelle au navigateur : viser 44 px de haut, pas l'espérer */
+  .cv{height:56px;font-size:24px}
+  .hb{padding:14px 0;font-size:14px}
+  .cnt div{font-size:13px;padding:5px 0}
+  .chip{padding:13px 16px;font-size:13.5px}
+  .tbtn{padding:13px 16px}
+  .sbtn,.dbtn{padding:13px 16px}
+  .vclick{display:inline-flex;align-items:center;min-height:44px;padding:0 12px}
+  input[type=range]{min-height:44px}
+  .step{flex-wrap:wrap}
+  .step .acts{width:100%;justify-content:flex-end}
+}
+/* repli de la grille : téléphones seulement — au-dessus, elle tient déjà */
 @media (max-width:640px){
   .wrap{padding:12px 10px 80px}
   .measure{min-width:0;flex-wrap:wrap}
   .beat{flex:1 1 46%}
-  .cv{height:56px;font-size:24px}
-  .hb{padding:13px 0;font-size:14px}
-  .cnt div{font-size:13px;padding:5px 0}
-  .chip{padding:11px 15px;font-size:13.5px}
-  .tbtn{padding:11px 15px}
-  .sbtn,.dbtn{padding:11px 15px}
-  input[type=range]{min-height:34px}
-  .step{flex-wrap:wrap}
-  .step .acts{width:100%;justify-content:flex-end}
+}
+
+/* ===== mode agrandi (C18) — une classe, pas :fullscreen, pour marcher aussi sans l'API ===== */
+body.zoom .wrap{max-width:none;padding:8px 14px 30px}
+body.zoom .card{padding:12px;margin-bottom:10px}
+body.zoom .card .sub,body.zoom #gFiche,body.zoom #gTools,body.zoom .lex{display:none}
+body.zoom .measure{min-width:0}
+body.zoom .beat{border-width:2px}
+body.zoom .cv{height:110px;font-size:48px}
+body.zoom .cv.g{font-size:34px}
+body.zoom .cnt div{font-size:19px;padding:6px 0}
+body.zoom .hb{font-size:19px;padding:12px 0}
+body.zoom .legend{font-size:15px;margin-top:8px}
+@media (max-width:640px){
+  /* un temps par ligne : c'est la largeur des cases qui rend la grille lisible à distance */
+  body.zoom .beat{flex:1 1 100%}
+  body.zoom .cv{height:84px;font-size:40px}
+  body.zoom .cnt div{font-size:16px}
+  body.zoom .hb{font-size:16px}
 }
 </style>
 </head>
@@ -150,7 +189,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 <div class="topbar">
   <div class="brand">
     <span class="name">Atelier <b>Cajón</b></span>
-    <span class="tag">tutos youtube → exercices · v1.4</span>
+    <span class="tag">tutos youtube → exercices · v1.5</span>
   </div>
   <div class="spacer"></div>
   <div class="tgroup">
@@ -160,7 +199,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
     <button class="tbtn" data-tab="parcours">Parcours</button>
     <button class="tbtn" data-tab="swing">Swing (audio)</button>
     <button class="tbtn" data-tab="io">Import / Export</button>
-    <button class="tbtn" id="btnFs" title="Plein écran — l'écran reste allumé pendant la lecture">⛶</button>
+    <button class="tbtn" id="btnFs" title="Mode agrandi — grossit la grille pour la lire à distance">⛶</button>
   </div>
 </div>
 
@@ -170,7 +209,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 <div class="tabpane show" id="pane-grille">
   <div class="card">
     <h2 id="gTitle">Groove</h2>
-    <div class="row" style="margin:6px 0 12px">
+    <div class="row" id="gFiche" style="margin:6px 0 12px">
       <label class="ctl">Titre <input type="text" id="fTitle" style="width:180px"></label>
       <label class="ctl">Type
         <select id="fType" style="width:110px">
@@ -191,7 +230,17 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
       <span title="Petite frappe fantôme, presque muette, qui fait « respirer » le rythme"><b class="g">s</b> = Fantôme <i>(Ghost)</i></span>
       <span id="legHands" title="La main qui frappe"><b style="color:var(--hand-d)">R</b>/<b style="color:var(--hand-g)">L</b> = Mains</span>
     </div>
-    <div class="row" style="margin-top:12px">
+    <details class="lex">
+      <summary>Lexique — que veulent dire B, S, s et les mains ?</summary>
+      <div class="lexbd">
+        <p><b class="B">B</b> — <b>Basse</b> <i>(bass)</i> : la main frappe à plat au centre de la peau. Son grave et rond, c'est l'ancrage du rythme.</p>
+        <p><b class="S">S</b> — <b>Claqué</b> <i>(slap)</i> : les doigts claquent sur le bord haut de la caisse. Son aigu et sec, il tranche.</p>
+        <p><b class="g">s</b> — <b>Fantôme</b> <i>(ghost)</i> : frappe très légère, presque inaudible toute seule. Elle ne s'entend pas, elle se sent — c'est elle qui fait respirer le groove.</p>
+        <p><b>Les mains</b> : chaque case indique la main qui frappe. <b>D</b> = droite, <b>G</b> = gauche, notées <b>R</b>/<b>L</b> dans les tutos anglophones. Le bouton « Mains en D/G » bascule d'une notation à l'autre.</p>
+        <p><b>Le swing</b> : le pourcentage dit à quel point les doubles-croches « e » et « a » arrivent en retard. 50 % = toutes égales, 67 % = ternaire, comme un triolet. Entre les deux se loge le feel du morceau.</p>
+      </div>
+    </details>
+    <div class="row" id="gTools" style="margin-top:12px">
       <button class="chip" id="btnUndo" title="Annule la dernière modification de la grille" disabled>↶ Annuler</button>
       <button class="chip" id="mHandFr" title="Afficher les mains en D/G (droite/gauche) plutôt qu'en R/L">Mains en D/G</button>
       <button class="chip" id="btnAddM">+ mesure</button>
@@ -211,10 +260,10 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
       <label class="ctl">Volume <input type="range" id="vol" min="0" max="100" value="85" style="width:90px"></label>
     </div>
     <div class="row" style="margin-top:10px">
-      <button class="chip on" id="mGhost">Ghosts</button>
-      <button class="chip on" id="mSlap">Slaps</button>
-      <button class="chip on" id="mBass">Basses</button>
-      <button class="chip" id="mHands">Mains seules (clics R/L)</button>
+      <button class="chip on" id="mGhost" title="Jouer ou couper les frappes fantômes (s)">Fantômes</button>
+      <button class="chip on" id="mSlap" title="Jouer ou couper les claqués (S)">Claqués</button>
+      <button class="chip on" id="mBass" title="Jouer ou couper les basses (B)">Basses</button>
+      <button class="chip" id="mHands" title="N'entendre que l'alternance des mains, en clics stéréo">Mains seules (clics R/L)</button>
       <button class="chip" id="mClick">Métronome</button>
     </div>
     <div class="row" style="margin-top:10px">
@@ -598,6 +647,8 @@ function syncControls(){
   byId("vol").value=Math.round(P.vol*100);
   setChip("mGhost",P.ghost); setChip("mSlap",P.slap); setChip("mBass",P.bass);
   setChip("mHands",P.handsOnly); setChip("mClick",P.click); setChip("mHandFr",P.handFr);
+  // le libellé suit la notation choisie (C16) : inutile de parler de R/L à qui a demandé D/G
+  byId("mHands").textContent="Mains seules (clics "+handLbl("R")+"/"+handLbl("L")+")";
 }
 function setChip(id,on){ byId(id).classList.toggle("on",!!on); }
 function bindControls(){
@@ -1015,7 +1066,11 @@ function drawHist(){
   g.beginPath(); g.moveTo(swingRes.ratio*W,30); g.lineTo(swingRes.ratio*W,H-24); g.stroke();
 }
 
-/* ---------------- plein écran + wake lock (v1.4 — port metronomefunk, C14 panel) ---------------- */
+/* ---------------- mode agrandi + wake lock ----------------
+   v1.4 : plein écran natif + wake lock (C14).
+   v1.5 : le plein écran n'agrandissait rien et disparaissait là où l'API manque
+   (iPhone, iPad anciens). On pilote désormais une classe « zoom » — c'est elle qui
+   grossit la grille — et le plein écran natif n'est qu'un bonus quand il existe (C18). */
 let wakeLock=null;
 async function wakeAcquire(){
   if(wakeLock || !("wakeLock" in navigator)) return;
@@ -1025,19 +1080,26 @@ async function wakeAcquire(){
   }catch(e){ wakeLock=null; }
 }
 function wakeRelease(){ if(wakeLock){ try{wakeLock.release();}catch(e){} wakeLock=null; } }
-function wakeUpdate(){ (playing||document.fullscreenElement) ? wakeAcquire() : wakeRelease(); }
+function zoomed(){ return document.body.classList.contains("zoom"); }
+function wakeUpdate(){ (playing||zoomed()) ? wakeAcquire() : wakeRelease(); }
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") wakeUpdate(); });
+function setZoom(on){
+  const b=byId("btnFs");
+  document.body.classList.toggle("zoom",on);
+  b.classList.toggle("on",on);
+  b.title=on?"Revenir à l'affichage normal":"Mode agrandi — grossit la grille pour la lire à distance";
+  // le plein écran natif n'est qu'un plus : sans lui, la classe fait déjà tout le travail
+  if(on){ const r=document.documentElement.requestFullscreen; if(r) r.call(document.documentElement).catch(()=>{}); }
+  else if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
+  wakeUpdate();
+}
 function bindFullscreen(){
   const b=byId("btnFs"); if(!b) return;
-  if(!document.documentElement.requestFullscreen){ b.classList.add("hidden"); return; }
-  b.onclick=()=>{
-    if(document.fullscreenElement) document.exitFullscreen().catch(()=>{});
-    else document.documentElement.requestFullscreen().catch(()=>{});
-  };
+  b.onclick=()=>setZoom(!zoomed());
+  // sortie du plein écran par Échap ou par le navigateur : resynchroniser l'affichage
   document.addEventListener("fullscreenchange",()=>{
-    b.classList.toggle("on",!!document.fullscreenElement);
-    b.title=document.fullscreenElement?"Quitter le plein écran":"Plein écran — l'écran reste allumé pendant la lecture";
-    wakeUpdate();
+    if(!document.fullscreenElement && zoomed()) setZoom(false);
+    else wakeUpdate();
   });
 }
 

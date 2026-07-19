@@ -67,7 +67,7 @@ textarea{background:var(--wood-1);border:1px solid var(--line-2);border-radius:8
 .beat .cells{display:grid;grid-template-columns:repeat(4,1fr)}
 .cell{border-right:1px solid var(--line);padding:0}
 .cell:last-child{border-right:none}
-.cv{width:100%;height:46px;display:flex;align-items:center;justify-content:center;
+.cv{width:100%;height:48px;display:flex;align-items:center;justify-content:center;
   font-family:'Fraunces',serif;font-weight:800;font-size:22px;background:transparent;border:none;transition:background .1s}
 .cv:hover{background:var(--wood-3)}
 .cv.B{color:var(--bass)} .cv.S{color:var(--slap)}
@@ -77,7 +77,7 @@ textarea{background:var(--wood-1);border:1px solid var(--line-2);border-radius:8
 .cnt div{text-align:center;font-size:12px;color:var(--skin-faint);padding:3px 0;border-right:1px solid var(--line)}
 .cnt div:last-child{border-right:none}
 .hands{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line)}
-.hb{border:none;background:transparent;font-size:11.5px;font-weight:700;padding:4px 0;border-right:1px solid var(--line);color:var(--skin-faint)}
+.hb{border:none;background:transparent;font-size:12.5px;font-weight:700;padding:8px 0;border-right:1px solid var(--line);color:var(--skin-faint)}
 .hb:last-child{border-right:none}
 .hb.R{color:var(--hand-d)} .hb.L{color:var(--hand-g)}
 .hb:hover{background:var(--wood-3)}
@@ -124,7 +124,25 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 .tabpane{display:none}.tabpane.show{display:block}
 .msgbar{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:var(--wood-3);border:1px solid var(--brass-deep);
   color:var(--skin);border-radius:10px;padding:9px 18px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60}
-.msgbar.show{opacity:1}
+.msgbar.show{opacity:1;pointer-events:auto}
+.msgbar button{background:transparent;border:1px solid var(--brass);color:var(--brass-soft);border-radius:7px;padding:3px 10px;margin-left:10px;font-weight:700}
+.vclick{cursor:pointer;text-decoration:underline dotted;text-underline-offset:3px}
+
+/* ===== responsive (C3 panel) ===== */
+@media (max-width:640px){
+  .wrap{padding:12px 10px 80px}
+  .measure{min-width:0;flex-wrap:wrap}
+  .beat{flex:1 1 46%}
+  .cv{height:56px;font-size:24px}
+  .hb{padding:13px 0;font-size:14px}
+  .cnt div{font-size:13px;padding:5px 0}
+  .chip{padding:11px 15px;font-size:13.5px}
+  .tbtn{padding:11px 15px}
+  .sbtn,.dbtn{padding:11px 15px}
+  input[type=range]{min-height:34px}
+  .step{flex-wrap:wrap}
+  .step .acts{width:100%;justify-content:flex-end}
+}
 </style>
 </head>
 <body>
@@ -132,7 +150,7 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
 <div class="topbar">
   <div class="brand">
     <span class="name">Atelier <b>Cajón</b></span>
-    <span class="tag">tutos youtube → exercices</span>
+    <span class="tag">tutos youtube → exercices · v1.3</span>
   </div>
   <div class="spacer"></div>
   <div class="tgroup">
@@ -167,17 +185,19 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
     <div class="sub">Clic sur une case = changer la frappe (∅ → B → S → s). Clic sur R/L = changer de main. <span id="swingTag"></span></div>
     <div class="gridzone" id="grid"></div>
     <div class="legend">
-      <span><b class="B">B</b> = Basse</span>
-      <span><b class="S">S</b> = Slap</span>
-      <span><b class="g">s</b> = Ghost note</span>
-      <span><b style="color:var(--hand-d)">R</b>/<b style="color:var(--hand-g)">L</b> = Mains</span>
+      <span title="Frappe grave au centre de la caisse"><b class="B">B</b> = Basse <i>(Bass)</i></span>
+      <span title="Frappe claquée sur le bord, aiguë et sèche"><b class="S">S</b> = Claqué <i>(Slap)</i></span>
+      <span title="Petite frappe fantôme, presque muette, qui fait « respirer » le rythme"><b class="g">s</b> = Fantôme <i>(Ghost)</i></span>
+      <span id="legHands" title="La main qui frappe"><b style="color:var(--hand-d)">R</b>/<b style="color:var(--hand-g)">L</b> = Mains</span>
     </div>
     <div class="row" style="margin-top:12px">
+      <button class="chip" id="btnUndo" title="Annule la dernière modification de la grille" disabled>↶ Annuler</button>
+      <button class="chip" id="mHandFr" title="Afficher les mains en D/G (droite/gauche) plutôt qu'en R/L">Mains en D/G</button>
       <button class="chip" id="btnAddM">+ mesure</button>
       <button class="chip" id="btnDelM">– mesure</button>
       <span style="flex:1"></span>
       <button class="chip" id="btnDemo">Recharger le groove d'exemple</button>
-      <button class="chip" id="btnClear">Vider</button>
+      <button class="chip" id="btnClear" title="Efface toutes les frappes de la grille (confirmation demandée)">Vider</button>
     </div>
   </div>
 
@@ -185,8 +205,8 @@ canvas{width:100%;border:1px solid var(--line);border-radius:10px;background:var
     <h2>Lecteur</h2>
     <div class="sub">Le swing s'applique aux doubles-croches « e » et « a ».</div>
     <div class="row">
-      <label class="ctl">Tempo <input type="range" id="tempo" min="40" max="180" value="90" style="width:150px"> <span id="tempoV" class="mono">90</span> bpm</label>
-      <label class="ctl">Swing <input type="range" id="swing" min="50" max="75" value="50" style="width:110px"> <span id="swingV" class="mono">50</span>%</label>
+      <label class="ctl">Tempo <input type="range" id="tempo" min="40" max="180" value="90" style="width:150px"> <span id="tempoV" class="mono vclick" title="Cliquer pour saisir une valeur précise">90</span> bpm</label>
+      <label class="ctl" title="50 % = binaire strict · 67 % = triolet. Retarde les doubles-croches « e » et « a ».">Swing <input type="range" id="swing" min="50" max="75" value="50" style="width:110px"> <span id="swingV" class="mono vclick" title="Cliquer pour saisir une valeur précise">50</span>%</label>
       <label class="ctl">Volume <input type="range" id="vol" min="0" max="100" value="85" style="width:90px"></label>
     </div>
     <div class="row" style="margin-top:10px">
@@ -325,6 +345,21 @@ let P = Object.assign({tempo:groove.bpm||90, swing:groove.swing||50, vol:.85,
   loopA:0, loopB:3}, load("cajon.player")||{});
 P.loopB = Math.min(P.loopB, groove.measures.length*4-1);
 
+/* ---------------- annulation (C1 panel) ---------------- */
+const UNDO=[];
+function pushUndo(){
+  UNDO.push(JSON.stringify(groove));
+  if(UNDO.length>30) UNDO.shift();
+  updateUndoBtn();
+}
+function doUndo(){
+  if(!UNDO.length) return;
+  groove=JSON.parse(UNDO.pop());
+  P.loopA=Math.min(P.loopA,totalSteps()/4-1); P.loopB=Math.min(P.loopB,totalSteps()/4-1);
+  persist(); renderAll(); updateUndoBtn(); toast("Modification annulée");
+}
+function updateUndoBtn(){ const b=byId("btnUndo"); if(b) b.disabled=!UNDO.length; }
+
 function save(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} }
 function load(k){ try{return JSON.parse(localStorage.getItem(k));}catch(e){return null;} }
 function persist(){ groove.bpm=P.tempo; groove.swing=P.swing; save("cajon.groove",groove); save("cajon.player",P); }
@@ -425,6 +460,7 @@ function stopPlay(){
 /* ---------------- rendu grille ---------------- */
 const CNT=["1","e","&","a","2","e","&","a","3","e","&","a","4","e","&","a"];
 function byId(id){ return document.getElementById(id); }
+function handLbl(h){ return P.handFr ? (h==="R"?"D":"G") : h; }
 function renderGrid(){
   byId("gTitle").textContent = groove.title||"Groove";
   const z=byId("grid"); z.innerHTML="";
@@ -446,8 +482,9 @@ function renderGrid(){
         cd.appendChild(btn); cells.appendChild(cd);
         const cc=document.createElement("div"); cc.textContent=CNT[s]; cnt.appendChild(cc);
         const hb=document.createElement("button"); hb.className="hb "+(cell.h||"");
-        hb.textContent=cell.h||"–";
-        hb.onclick=()=>{ cell.h = cell.h==="R"?"L":(cell.h==="L"?null:"R"); persist(); renderGrid(); };
+        hb.textContent=cell.h?handLbl(cell.h):"–";
+        hb.title=cell.h?("Main "+(cell.h==="R"?"droite":"gauche")+" — cliquer pour changer"):"Cliquer pour assigner une main";
+        hb.onclick=()=>{ pushUndo(); cell.h = cell.h==="R"?"L":(cell.h==="L"?null:"R"); persist(); renderGrid(); };
         hands.appendChild(hb);
       }
       bd.appendChild(cells); bd.appendChild(cnt); bd.appendChild(hands);
@@ -456,6 +493,7 @@ function renderGrid(){
     z.appendChild(mdiv);
   });
   byId("swingTag").innerHTML = P.swing>51 ? '<span class="swtag">swing '+P.swing+'%</span>' : "";
+  byId("legHands").innerHTML='<b style="color:var(--hand-d)">'+handLbl("R")+'</b>/<b style="color:var(--hand-g)">'+handLbl("L")+'</b> = Main '+(P.handFr?'droite / gauche':'droite (R) / gauche (L)');
   renderLoopSel();
 }
 function muted(cell){
@@ -463,6 +501,7 @@ function muted(cell){
   return (cell.v==="s"&&!P.ghost)||(cell.v==="S"&&!P.slap)||(cell.v==="B"&&!P.bass);
 }
 function cycleCell(mi,s){
+  pushUndo();
   const cell=groove.measures[mi][s];
   cell.v = cell.v===null?"B":VOICES[cell.v].next;
   if(cell.v && !cell.h) cell.h = s%2===0?"R":"L";
@@ -542,7 +581,7 @@ function syncControls(){
   byId("swing").value=P.swing; byId("swingV").textContent=P.swing;
   byId("vol").value=Math.round(P.vol*100);
   setChip("mGhost",P.ghost); setChip("mSlap",P.slap); setChip("mBass",P.bass);
-  setChip("mHands",P.handsOnly); setChip("mClick",P.click);
+  setChip("mHands",P.handsOnly); setChip("mClick",P.click); setChip("mHandFr",P.handFr);
 }
 function setChip(id,on){ byId(id).classList.toggle("on",!!on); }
 function bindControls(){
@@ -557,8 +596,24 @@ function bindControls(){
   byId("btnPlay").onclick=()=>{ playing?stopPlay():startPlay(); };
   byId("btnAddM").onclick=()=>{ if(groove.measures.length<4){ groove.measures.push(emptyMeasure()); P.loopB=totalSteps()/4-1; persist(); renderGrid(); renderSteps(); } };
   byId("btnDelM").onclick=()=>{ if(groove.measures.length>1){ groove.measures.pop(); P.loopA=0; P.loopB=totalSteps()/4-1; persist(); renderGrid(); renderSteps(); } };
-  byId("btnDemo").onclick=()=>{ groove=JSON.parse(JSON.stringify(DEMO)); P.loopA=0; P.loopB=3; persist(); renderAll(); toast("Groove d'exemple rechargé"); };
-  byId("btnClear").onclick=()=>{ groove.measures=groove.measures.map(()=>emptyMeasure()); persist(); renderGrid(); renderSteps(); };
+  byId("btnDemo").onclick=()=>{ pushUndo(); groove=JSON.parse(JSON.stringify(DEMO)); P.loopA=0; P.loopB=3; persist(); renderAll(); toast("Groove d'exemple rechargé","Rétablir",doUndo); };
+  byId("btnClear").onclick=()=>{
+    if(!confirm("Vider toute la grille ? (vous pourrez encore annuler)")) return;
+    pushUndo();
+    groove.measures=groove.measures.map(()=>emptyMeasure());
+    persist(); renderGrid(); renderSteps();
+    toast("Grille vidée","Rétablir",doUndo);
+  };
+  byId("btnUndo").onclick=doUndo;
+  byId("mHandFr").onclick=()=>{ P.handFr=!P.handFr; persist(); syncControls(); renderGrid(); };
+  [["tempoV","tempo",40,180,"Tempo (40–180 bpm)"],["swingV","swing",50,75,"Swing (50–75 %)"]].forEach(([vid,rid,mn,mx,lbl])=>{
+    byId(vid).onclick=()=>{
+      const cur=byId(rid).value, val=prompt(lbl,cur);
+      if(val===null) return;
+      const n=Math.max(mn,Math.min(mx,parseInt(val,10)||+cur));
+      P[rid==="tempo"?"tempo":"swing"]=n; persist(); syncControls(); renderGrid(); renderSteps();
+    };
+  });
   byId("btnResetSteps").onclick=()=>{ save(stepKey(),[]); renderSteps(); };
   document.querySelectorAll("[data-tab]").forEach(b=>{
     b.onclick=()=>{ document.querySelectorAll("[data-tab]").forEach(x=>x.classList.remove("on"));
@@ -651,7 +706,7 @@ function renderLib(){
       acts.appendChild(yt);
     }
     const op=document.createElement("button"); op.className="sbtn"; op.textContent="Ouvrir";
-    op.onclick=()=>{ stopPlay(); groove=JSON.parse(JSON.stringify(g));
+    op.onclick=()=>{ stopPlay(); pushUndo(); groove=JSON.parse(JSON.stringify(g));
       P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=totalSteps()/4-1;
       persist(); renderAll(); document.querySelector('[data-tab="grille"]').click();
       toast("« "+(g.title||"Sans titre")+" » chargé"); };
@@ -713,6 +768,7 @@ function parseQuick(txt,title,bpm){
 function bindIO(){
   byId("btnQuick").onclick=()=>{
     try{
+      pushUndo();
       groove=parseQuick(byId("quick").value, byId("qTitle").value, +byId("qBpm").value);
       P.tempo=groove.bpm; P.loopA=0; P.loopB=totalSteps()/4-1;
       persist(); renderAll(); toast("Groove importé : "+groove.title);
@@ -722,6 +778,7 @@ function bindIO(){
     try{
       const g=JSON.parse(byId("json").value);
       if(!g.measures||!g.measures.length) throw "JSON sans mesures";
+      pushUndo();
       groove=g; P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=totalSteps()/4-1;
       persist(); renderAll(); toast("JSON chargé");
     }catch(err){ toast("⚠ "+err); }
@@ -944,8 +1001,16 @@ function drawHist(){
 
 /* ---------------- divers ---------------- */
 let msgT=null;
-function toast(s){ const m=byId("msg"); m.textContent=s; m.classList.add("show");
-  clearTimeout(msgT); msgT=setTimeout(()=>m.classList.remove("show"),2600); }
+function toast(s,actionLabel,actionFn){
+  const m=byId("msg"); m.textContent=s;
+  if(actionLabel&&actionFn){
+    const b=document.createElement("button"); b.textContent=actionLabel;
+    b.onclick=()=>{ actionFn(); m.classList.remove("show"); };
+    m.appendChild(b);
+  }
+  m.classList.add("show");
+  clearTimeout(msgT); msgT=setTimeout(()=>m.classList.remove("show"), actionLabel?6000:2600);
+}
 function renderAll(){ syncControls(); syncFiche(); renderGrid(); renderSteps(); refreshJson(); renderLib(); }
 
 bindControls(); bindIO(); bindSwing(); bindFiche(); bindLib(); renderAll(); syncCloud(false);

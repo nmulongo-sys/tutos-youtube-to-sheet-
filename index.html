@@ -65,6 +65,7 @@ textarea{background:var(--wood-1);border:1px solid var(--line-2);border-radius:8
 .measure{display:flex;gap:10px;margin-bottom:14px;min-width:640px}
 .beat{flex:1;border:1.5px solid var(--line-2);border-radius:10px;overflow:hidden;background:var(--wood-1)}
 .beat .cells{display:grid;grid-template-columns:repeat(4,1fr)}
+.beat.tern .cells,.beat.tern .cnt,.beat.tern .hands{grid-template-columns:repeat(3,1fr)}
 .cell{border-right:1px solid var(--line);padding:0}
 .cell:last-child{border-right:none}
 .cv{width:100%;height:48px;display:flex;align-items:center;justify-content:center;
@@ -207,7 +208,7 @@ body.zoom .legend{font-size:15px;margin-top:8px}
 <div class="topbar">
   <div class="brand">
     <span class="name">Atelier <b>Cajón</b></span>
-    <span class="tag">tutos youtube → exercices · v1.6</span>
+    <span class="tag">tutos youtube → exercices · v1.7</span>
   </div>
   <div class="spacer"></div>
   <div class="tgroup">
@@ -271,6 +272,8 @@ body.zoom .legend{font-size:15px;margin-top:8px}
         <p><b class="S">S</b> — <b>Claqué</b> <i>(slap)</i> : les doigts claquent sur le bord haut de la caisse. Son aigu et sec, il tranche.</p>
         <p><b class="g">s</b> — <b>Fantôme</b> <i>(ghost)</i> : frappe très légère, presque inaudible toute seule. Elle ne s'entend pas, elle se sent — c'est elle qui fait respirer le groove.</p>
         <p><b>Les mains</b> : chaque case indique la main qui frappe. <b>D</b> = droite, <b>G</b> = gauche, notées <b>R</b>/<b>L</b> dans les tutos anglophones. Le bouton « Mains en D/G » bascule d'une notation à l'autre.</p>
+        <p><b>Binaire ou ternaire</b> : par défaut chaque temps se divise en 4 doubles-croches. Le bouton « Ternaire (3/temps) » le divise en 3 triolets — la mesure passe de 16 à 12 cases, comptées 1-la-li. Le swing disparaît alors : une grille ternaire est déjà ternaire.</p>
+        <p><b>Pousser / tirer</b> : les boutons « pas » et « temps » font tourner tout le groove d'un cran, en boucle. C'est ce qu'il faut quand un tuto commence la grille sur un autre temps que vous.</p>
         <p><b>Le swing</b> : le pourcentage dit à quel point les doubles-croches « e » et « a » arrivent en retard. 50 % = toutes égales, 67 % = ternaire, comme un triolet. Entre les deux se loge le feel du morceau.</p>
       </div>
     </details>
@@ -279,6 +282,11 @@ body.zoom .legend{font-size:15px;margin-top:8px}
       <button class="chip" id="mHandFr" title="Afficher les mains en D/G (droite/gauche) plutôt qu'en R/L">Mains en D/G</button>
       <button class="chip" id="btnAddM">+ mesure</button>
       <button class="chip" id="btnDelM">– mesure</button>
+      <button class="chip" id="btnDiv" title="Passer la grille en triolets (3 cases par temps) au lieu des doubles-croches (4 cases)">Ternaire (3/temps)</button>
+      <button class="chip" id="btnShiftL" title="Tirer : tout le groove recule d'un pas (cyclique)">◀ pas</button>
+      <button class="chip" id="btnShiftR" title="Pousser : tout le groove avance d'un pas (cyclique)">pas ▶</button>
+      <button class="chip" id="btnShiftLB" title="Tirer d'un temps entier (cyclique)">◀ temps</button>
+      <button class="chip" id="btnShiftRB" title="Pousser d'un temps entier (cyclique)">temps ▶</button>
       <span style="flex:1"></span>
       <button class="chip" id="btnDemo">Recharger le groove d'exemple</button>
       <button class="chip" id="btnClear" title="Efface toutes les frappes de la grille (confirmation demandée)">Vider</button>
@@ -287,7 +295,7 @@ body.zoom .legend{font-size:15px;margin-top:8px}
 
   <div class="card">
     <h2>Lecteur</h2>
-    <div class="sub">Le swing s'applique aux doubles-croches « e » et « a ».</div>
+    <div class="sub" id="swingHint">Le swing s'applique aux doubles-croches « e » et « a ».</div>
     <div class="row">
       <label class="ctl">Tempo <input type="range" id="tempo" min="40" max="180" value="90" style="width:150px"> <span id="tempoV" class="mono vclick" title="Cliquer pour saisir une valeur précise">90</span> bpm</label>
       <label class="ctl" title="50 % = binaire strict · 67 % = triolet. Retarde les doubles-croches « e » et « a ».">Swing <input type="range" id="swing" min="50" max="75" value="50" style="width:110px"> <span id="swingV" class="mono vclick" title="Cliquer pour saisir une valeur précise">50</span>%</label>
@@ -383,7 +391,7 @@ body.zoom .legend{font-size:15px;margin-top:8px}
   </div>
   <div class="card">
     <h2>Import rapide (format tuto)</h2>
-    <div class="sub">Collez la grille comme dans la vidéo : une lettre par double-croche (B, S, s, ou « . » pour un silence), un bloc par temps. 2<sup>e</sup> ligne optionnelle : les mains.</div>
+    <div class="sub">Collez la grille comme dans la vidéo : une lettre par case (B, S, s, ou « . » pour un silence), <b>un bloc par temps</b>. C'est la taille des blocs qui fixe la division : <b>4 signes = doubles-croches</b>, <b>3 signes = triolets</b> (ternaire, 12 pas par mesure). 2<sup>e</sup> ligne optionnelle : les mains — une par case, ou une par frappe seulement.<br>Exemple ternaire : <code>B·s S·· B·s S··</code> / <code>R R L R R L</code></div>
     <textarea id="quick" placeholder="BSsS BsSB BsSB BSsS&#10;RLRL RLRL RLRL RLRL"></textarea>
     <div class="row" style="margin-top:8px">
       <label class="ctl">Titre <input type="text" id="qTitle" placeholder="Nom du groove"></label>
@@ -417,7 +425,31 @@ body.zoom .legend{font-size:15px;margin-top:8px}
 /* ---------------- état ---------------- */
 const VOICES = {B:{next:"S"}, S:{next:"s"}, s:{next:null}};
 function emptyCell(){ return {v:null,h:null}; }
-function emptyMeasure(){ return Array.from({length:16},emptyCell); }
+
+/* ---- division du temps (v1.7) ----
+   4 = doubles-croches (binaire, 16 pas/mesure) · 3 = triolets (ternaire, 12 pas/mesure).
+   La source de vérité est la LONGUEUR d'une mesure, pas un champ à part : les grooves
+   déjà enregistrés (16 cases) restent binaires sans migration, en local comme dans le
+   cloud, et le JSON existant reste valide. */
+function DIV(g){ g=g||groove; return (g&&g.measures&&g.measures[0]&&g.measures[0].length===12)?3:4; }
+function SPM(g){ return 4*DIV(g); }                       // pas par mesure : 12 ou 16
+function nbBeats(){ return groove.measures.length*4; }    // le temps reste l'unité de boucle
+function emptyMeasure(d){ d=d||DIV(); return Array.from({length:4*d},emptyCell); }
+
+/* toute grille entrante est ramenée à une forme stricte : mesures de même longueur,
+   cases complètes. Sans ça, une grille tronquée fait planter le séquenceur. */
+function normaliser(g){
+  if(!g||!Array.isArray(g.measures)||!g.measures.length) return g;
+  const d=(g.measures[0]&&g.measures[0].length===12)?3:4, n=4*d;
+  g.measures=g.measures.map(m=>{
+    const out=[];
+    for(let i=0;i<n;i++){ const c=m&&m[i];
+      out.push(c&&typeof c==="object"?{v:c.v||null,h:c.h||null}:{v:null,h:null}); }
+    return out;
+  });
+  g.div=d;
+  return g;
+}
 
 const DEMO = {
   title:"Groove d'exemple (tuto)",
@@ -431,7 +463,20 @@ const DEMO = {
   ]]
 };
 
-let groove = load("cajon.groove") || JSON.parse(JSON.stringify(DEMO));
+/* exemple ternaire — 4 temps × 3 triolets : B·s S·· B·s S·· / mains R R L  R R L */
+const DEMO3 = {
+  title:"Exemple ternaire (12 pas)",
+  type:"groove", style:"", url:"",
+  bpm:90, swing:50, div:3,
+  measures:[[
+    {v:"B",h:"R"},{v:null,h:null},{v:"s",h:"R"},
+    {v:"S",h:"L"},{v:null,h:null},{v:null,h:null},
+    {v:"B",h:"R"},{v:null,h:null},{v:"s",h:"R"},
+    {v:"S",h:"L"},{v:null,h:null},{v:null,h:null}
+  ]]
+};
+
+let groove = normaliser(load("cajon.groove") || JSON.parse(JSON.stringify(DEMO)));
 let LIB = load("cajon.lib") || [];
 let P = Object.assign({tempo:groove.bpm||90, swing:groove.swing||50, vol:.85,
   ghost:true, slap:true, bass:true, handsOnly:false, click:false,
@@ -448,7 +493,7 @@ function pushUndo(){
 function doUndo(){
   if(!UNDO.length) return;
   groove=JSON.parse(UNDO.pop());
-  P.loopA=Math.min(P.loopA,totalSteps()/4-1); P.loopB=Math.min(P.loopB,totalSteps()/4-1);
+  P.loopA=Math.min(P.loopA,nbBeats()-1); P.loopB=Math.min(P.loopB,nbBeats()-1);
   persist(); renderAll(); updateUndoBtn(); toast("Modification annulée");
 }
 function updateUndoBtn(){ const b=byId("btnUndo"); if(b) b.disabled=!UNDO.length; }
@@ -506,9 +551,11 @@ function playCell(cell,t){
 
 /* ---------------- séquenceur lookahead ---------------- */
 let playing=false, nextT=0, curStep=0, timer=null; const drawQ=[];
-function totalSteps(){ return groove.measures.length*16; }
-function loopRange(){ const a=P.loopA*4, b=(P.loopB+1)*4; return [a, Math.min(b,totalSteps())]; }
+function totalSteps(){ return groove.measures.length*SPM(); }
+function loopRange(){ const D=DIV(), a=P.loopA*D, b=(P.loopB+1)*D; return [a, Math.min(b,totalSteps())]; }
 function stepDur(i){ // durée jusqu'au step suivant, avec swing sur les paires de doubles
+  // ternaire : les trois pas du temps sont égaux par construction — le swing n'a pas d'objet
+  if(DIV()===3) return 60/P.tempo/3;
   const sx=60/P.tempo/4, e=sx*2, r=P.swing/100;
   return (i%2===0) ? e*r : e*(1-r);
 }
@@ -516,10 +563,10 @@ function schedule(){
   const c=audio(); const [a,b]=loopRange();
   while(nextT < c.currentTime+0.12){
     if(curStep<a||curStep>=b) curStep=a;
-    const m=Math.floor(curStep/16), s=curStep%16;
+    const S=SPM(), D=DIV(), m=Math.floor(curStep/S), s=curStep%S;
     const cell=groove.measures[m][s];
     if(cell.v) playCell(cell,nextT);
-    if(P.click && s%4===0) click(nextT, s===0);
+    if(P.click && s%D===0) click(nextT, s===0);
     drawQ.push({i:curStep,t:nextT,hit:!!cell.v});
     nextT += stepDur(curStep);
     curStep = (curStep+1);
@@ -553,7 +600,8 @@ function stopPlay(){
 }
 
 /* ---------------- rendu grille ---------------- */
-const CNT=["1","e","&","a","2","e","&","a","3","e","&","a","4","e","&","a"];
+const CNT4=["1","e","&","a"], CNT3=["1","la","li"];
+function cntLbl(bt,k){ return k===0 ? String(bt+1) : (DIV()===3?CNT3[k]:CNT4[k]); }
 function byId(id){ return document.getElementById(id); }
 function handLbl(h){ return P.handFr ? (h==="R"?"D":"G") : h; }
 function renderGrid(){
@@ -561,21 +609,22 @@ function renderGrid(){
   const z=byId("grid"); z.innerHTML="";
   groove.measures.forEach((meas,mi)=>{
     const mdiv=document.createElement("div"); mdiv.className="measure";
+    const D=DIV(), S=SPM();
     for(let bt=0;bt<4;bt++){
       const bd=document.createElement("div");
-      bd.className="beat"+(bt+mi*4>=P.loopA&&bt+mi*4<=P.loopB?" inloop":" offloop");
+      bd.className="beat"+(D===3?" tern":"")+(bt+mi*4>=P.loopA&&bt+mi*4<=P.loopB?" inloop":" offloop");
       const cells=document.createElement("div"); cells.className="cells";
       const cnt=document.createElement("div"); cnt.className="cnt";
       const hands=document.createElement("div"); hands.className="hands";
-      for(let k=0;k<4;k++){
-        const s=bt*4+k, gi=mi*16+s, cell=meas[s];
+      for(let k=0;k<D;k++){
+        const s=bt*D+k, gi=mi*S+s, cell=meas[s];
         const cd=document.createElement("div"); cd.className="cell"; cd.dataset.i=gi;
         const btn=document.createElement("button");
         btn.className="cv "+(cell.v==="s"?"g":cell.v||"")+(muted(cell)?" mut":"");
         btn.textContent=cell.v||"·";
         btn.onclick=()=>{ cycleCell(mi,s); };
         cd.appendChild(btn); cells.appendChild(cd);
-        const cc=document.createElement("div"); cc.textContent=CNT[s]; cnt.appendChild(cc);
+        const cc=document.createElement("div"); cc.textContent=cntLbl(bt,k); cnt.appendChild(cc);
         const hb=document.createElement("button"); hb.className="hb "+(cell.h||"");
         hb.textContent=cell.h?handLbl(cell.h):"–";
         hb.title=cell.h?("Main "+(cell.h==="R"?"droite":"gauche")+" — cliquer pour changer"):"Cliquer pour assigner une main";
@@ -605,12 +654,52 @@ function cycleCell(mi,s){
   // en relecture, une case qu'on vient de trancher n'est plus douteuse :
   // les marques se comportent comme une liste de contrôle qui se vide
   if(RELEC){
-    const d=RELEC.grilles[RELEC.i].doute, k=d?d.indexOf(mi*16+s):-1;
+    const d=RELEC.grilles[RELEC.i].doute, k=d?d.indexOf(mi*SPM()+s):-1;
     if(k>=0) d.splice(k,1);
   }
   persist(); renderGrid(); renderSteps();
   if(RELEC) majRelecture();
 }
+/* ---------------- division & décalage (v1.7) ----------------
+   Conversion : chaque frappe est reportée sur le pas ternaire/binaire le plus proche
+   dans son temps. La correspondance 4↔3 n'est pas bijective : une case peut en écraser
+   une autre. Les frappes écartées sont COMPTÉES et annoncées — jamais perdues en silence,
+   et « Annuler » rétablit l'état exact. */
+function setDiv(d){
+  const cur=DIV(); if(d===cur) return;
+  pushUndo();
+  let perdus=0;
+  groove.measures=groove.measures.map(m=>{
+    const out=[]; for(let i=0;i<4*d;i++) out.push({v:null,h:null});
+    for(let bt=0;bt<4;bt++) for(let k=0;k<cur;k++){
+      const src=m[bt*cur+k]; if(!src||!src.v) continue;
+      const j=Math.min(d-1,Math.round(k*d/cur)), t=bt*d+j;
+      if(out[t].v){ perdus++; continue; }
+      out[t]={v:src.v,h:src.h};
+    }
+    return out;
+  });
+  groove.div=d;
+  P.loopA=0; P.loopB=nbBeats()-1;
+  if(d===3) P.swing=50;                 // pas de swing sur une grille déjà ternaire
+  persist(); syncControls(); renderAll();
+  toast((d===3?"Grille ternaire — 3 pas par temps":"Grille binaire — 4 pas par temps")
+        +(perdus?" · "+perdus+" frappe"+(perdus>1?"s":"")+" écartée"+(perdus>1?"s":"")+" à la conversion":""),
+        "Rétablir", doUndo);
+}
+
+/* décalage cyclique de tout le groove, d'un pas ou d'un temps.
+   n>0 = pousser (les frappes avancent), n<0 = tirer. Rien ne sort de la grille. */
+function decaler(n){
+  const N=totalSteps(); if(!N) return;
+  pushUndo();
+  const flat=[]; groove.measures.forEach(m=>m.forEach(c=>flat.push({v:c.v,h:c.h})));
+  const out=flat.map((_,i)=>flat[((i-n)%N+N)%N]);
+  const S=SPM();
+  groove.measures=groove.measures.map((m,mi)=>out.slice(mi*S,(mi+1)*S));
+  persist(); renderGrid(); renderSteps();
+}
+
 function renderLoopSel(){
   const nb=groove.measures.length*4;
   ["loopA","loopB"].forEach(id=>{
@@ -698,6 +787,14 @@ function syncControls(){
   byId("vol").value=Math.round(P.vol*100);
   setChip("mGhost",P.ghost); setChip("mSlap",P.slap); setChip("mBass",P.bass);
   setChip("mHands",P.handsOnly); setChip("mClick",P.click); setChip("mHandFr",P.handFr);
+  // en ternaire le swing n'a pas d'objet : on le neutralise au lieu de laisser un curseur menteur
+  const tern=DIV()===3, sw=byId("swing");
+  setChip("btnDiv",tern);
+  if(sw){ sw.disabled=tern; sw.parentElement.style.opacity=tern?".4":""; }
+  const hint=byId("swingHint");
+  if(hint) hint.textContent = tern
+    ? "Grille ternaire (3 pas par temps) : les trois pas sont égaux, le swing ne s'applique pas."
+    : "Le swing s'applique aux doubles-croches « e » et « a ».";
   // le libellé suit la notation choisie (C16) : inutile de parler de R/L à qui a demandé D/G
   byId("mHands").textContent="Mains seules (clics "+handLbl("R")+"/"+handLbl("L")+")";
 }
@@ -710,11 +807,16 @@ function bindControls(){
     .forEach(([id,k])=>{ byId(id).onclick=()=>{ P[k]=!P[k]; persist(); syncControls(); renderGrid(); }; });
   byId("loopA").onchange=e=>{ P.loopA=+e.target.value; if(P.loopB<P.loopA)P.loopB=P.loopA; persist(); renderGrid(); };
   byId("loopB").onchange=e=>{ P.loopB=+e.target.value; if(P.loopA>P.loopB)P.loopA=P.loopB; persist(); renderGrid(); };
-  byId("loopAll").onclick=()=>{ P.loopA=0; P.loopB=totalSteps()/4-1; persist(); renderGrid(); };
+  byId("loopAll").onclick=()=>{ P.loopA=0; P.loopB=nbBeats()-1; persist(); renderGrid(); };
   byId("btnPlay").onclick=()=>{ playing?stopPlay():startPlay(); };
-  byId("btnAddM").onclick=()=>{ if(groove.measures.length<4){ groove.measures.push(emptyMeasure()); P.loopB=totalSteps()/4-1; persist(); renderGrid(); renderSteps(); } };
-  byId("btnDelM").onclick=()=>{ if(groove.measures.length>1){ groove.measures.pop(); P.loopA=0; P.loopB=totalSteps()/4-1; persist(); renderGrid(); renderSteps(); } };
-  byId("btnDemo").onclick=()=>{ pushUndo(); groove=JSON.parse(JSON.stringify(DEMO)); P.loopA=0; P.loopB=3; persist(); renderAll(); toast("Groove d'exemple rechargé","Rétablir",doUndo); };
+  byId("btnAddM").onclick=()=>{ if(groove.measures.length<4){ groove.measures.push(emptyMeasure()); P.loopB=nbBeats()-1; persist(); renderGrid(); renderSteps(); } };
+  byId("btnDelM").onclick=()=>{ if(groove.measures.length>1){ groove.measures.pop(); P.loopA=0; P.loopB=nbBeats()-1; persist(); renderGrid(); renderSteps(); } };
+  byId("btnDemo").onclick=()=>{ pushUndo(); groove=normaliser(JSON.parse(JSON.stringify(DIV()===3?DEMO3:DEMO))); P.loopA=0; P.loopB=3; persist(); renderAll(); toast("Groove d'exemple rechargé","Rétablir",doUndo); };
+  byId("btnDiv").onclick=()=>{ setDiv(DIV()===3?4:3); };
+  byId("btnShiftL").onclick=()=>decaler(-1);
+  byId("btnShiftR").onclick=()=>decaler(1);
+  byId("btnShiftLB").onclick=()=>decaler(-DIV());
+  byId("btnShiftRB").onclick=()=>decaler(DIV());
   byId("btnClear").onclick=()=>{
     if(!confirm("Vider toute la grille ? (vous pourrez encore annuler)")) return;
     pushUndo();
@@ -843,10 +945,12 @@ function entrerRelecture(){
 function chargerGrilleRelue(){
   const g=RELEC.grilles[RELEC.i], n=RELEC.grilles.length, mesures=[];
   pushUndo();
-  for(let m=0;m<g.frappes.length/16;m++){
+  // le service de vision rend une chaîne continue : la division se déduit de sa longueur
+  const dR=(g.frappes.length%16===0)?4:((g.frappes.length%12===0)?3:4), nR=4*dR;
+  for(let m=0;m<g.frappes.length/nR;m++){
     const meas=[];
-    for(let k=0;k<16;k++){
-      const idx=m*16+k, ch=g.frappes[idx];
+    for(let k=0;k<nR;k++){
+      const idx=m*nR+k, ch=g.frappes[idx];
       const v = ch==="B"?"B":ch==="S"?"S":ch==="s"?"s":null;
       let h = g.mains ? g.mains[idx] : null;
       if(!h || h===".") h=null;
@@ -856,7 +960,7 @@ function chargerGrilleRelue(){
   }
   groove={title:(n>1?"Photo — grille "+(RELEC.i+1):"Photo importée"), type:"groove",
           style:"", url:"", bpm:P.tempo, swing:P.swing, measures:mesures};
-  P.loopA=0; P.loopB=totalSteps()/4-1;
+  P.loopA=0; P.loopB=nbBeats()-1;
   persist(); renderAll(); majRelecture();
 }
 
@@ -947,7 +1051,7 @@ function renderLib(){
   const TYPES={groove:"Groove",chanson:"Chanson",exercice:"Exercice"};
   items.slice().sort((a,b)=>(a.title||"").localeCompare(b.title||"")).forEach(g=>{
     const div=document.createElement("div"); div.className="step";
-    const meta=[TYPES[g.type]||"Groove", g.style, g.bpm?g.bpm+" bpm":"", g.swing>51?"swing "+g.swing+"%":"", g.measures.length+" mes.", g.savedAt].filter(Boolean).join(" · ");
+    const meta=[TYPES[g.type]||"Groove", g.style, g.bpm?g.bpm+" bpm":"", g.swing>51?"swing "+g.swing+"%":"", g.measures.length+" mes.", (g.measures[0]&&g.measures[0].length===12?"ternaire":""), g.savedAt].filter(Boolean).join(" · ");
     div.innerHTML='<div class="num">♪</div><div class="bd"><h3>'+(g.title||"Sans titre")+'</h3><p>'+meta+'</p></div>';
     const acts=document.createElement("div"); acts.className="acts";
     if(g.url&&/^https?:\/\//.test(g.url)){
@@ -957,7 +1061,7 @@ function renderLib(){
     }
     const op=document.createElement("button"); op.className="sbtn"; op.textContent="Ouvrir";
     op.onclick=()=>{ stopPlay(); pushUndo(); groove=JSON.parse(JSON.stringify(g));
-      P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=totalSteps()/4-1;
+      P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=nbBeats()-1;
       persist(); renderAll(); document.querySelector('[data-tab="grille"]').click();
       toast("« "+(g.title||"Sans titre")+" » chargé"); };
     const del=document.createElement("button"); del.className="dbtn"; del.textContent="🗑";
@@ -995,32 +1099,50 @@ function refreshJson(){ byId("json").value=JSON.stringify(groove,null,1); }
 function parseQuick(txt,title,bpm){
   const lines=txt.trim().split(/\n/).map(l=>l.trim()).filter(Boolean);
   if(!lines.length) throw "Grille vide";
-  const strokes=lines[0].replace(/[|,]/g," ").split(/\s+/).join("");
+  const blocs=lines[0].replace(/[|,]/g," ").trim().split(/\s+/).filter(Boolean);
+  const strokes=blocs.join("");
   if(!/^[BSs.·-]+$/.test(strokes)) throw "Caractères invalides (attendus : B S s . )";
-  if(strokes.length%16!==0) throw "Il faut un multiple de 16 doubles-croches (reçu : "+strokes.length+")";
-  let hands="";
+  // un bloc = un temps : 3 signes → triolets, 4 signes → doubles-croches.
+  // sans espaces, on retombe sur la longueur totale (16 prioritaire, sinon 12).
+  let d=0;
+  if(blocs.length>1 && blocs.every(b=>b.length===3)) d=3;
+  else if(blocs.length>1 && blocs.every(b=>b.length===4)) d=4;
+  else if(strokes.length%16===0) d=4;
+  else if(strokes.length%12===0) d=3;
+  if(!d) throw "Division indéterminée : séparez les temps par un espace (3 signes = triolets, 4 = doubles-croches)";
+  const n=4*d;
+  if(strokes.length%n!==0) throw "Il faut un multiple de "+n+" signes ("+(d===3?"triolets":"doubles-croches")+") — reçu : "+strokes.length;
+  const nFrappes=strokes.split("").filter(c=>/[BSs]/.test(c)).length;
+  let hands="", parFrappe=false;
   if(lines[1]){ hands=lines[1].replace(/[|,]/g," ").split(/\s+/).join("").toUpperCase();
-    if(!/^[RLDG.·-]*$/.test(hands)) throw "Ligne des mains invalide (R L ou D G)"; }
-  const measures=[];
-  for(let m=0;m<strokes.length/16;m++){
+    if(!/^[RLDG.·-]*$/.test(hands)) throw "Ligne des mains invalide (R L ou D G)";
+    // les tutos écrivent souvent une main par FRAPPE (R R L) et non une par case :
+    // les deux conventions sont acceptées, la longueur tranche.
+    if(hands.length===strokes.length) parFrappe=false;
+    else if(hands.length===nFrappes) parFrappe=true;
+    else throw "Ligne des mains : "+hands.length+" signes reçus, il en faut "+strokes.length+" (une par case) ou "+nFrappes+" (une par frappe)";
+  }
+  const measures=[]; let nf=0;
+  for(let m=0;m<strokes.length/n;m++){
     const meas=[];
-    for(let i=0;i<16;i++){
-      const idx=m*16+i, ch=strokes[idx];
+    for(let i=0;i<n;i++){
+      const idx=m*n+i, ch=strokes[idx];
       const v=ch==="B"?"B":ch==="S"?"S":ch==="s"?"s":null;
-      let h=hands[idx]||null;
+      let h=null;
+      if(hands) h = parFrappe ? (v?hands[nf++]:null) : (hands[idx]||null);
       if(h==="D")h="R"; if(h==="G")h="L"; if(h==="."||h==="·"||h==="-")h=null;
       meas.push({v, h: v?(h||(i%2===0?"R":"L")):null});
     }
     measures.push(meas);
   }
-  return {title:title||"Groove importé", bpm:bpm||90, swing:50, measures};
+  return {title:title||"Groove importé", bpm:bpm||90, swing:50, div:d, measures};
 }
 function bindIO(){
   byId("btnQuick").onclick=()=>{
     try{
       pushUndo();
-      groove=parseQuick(byId("quick").value, byId("qTitle").value, +byId("qBpm").value);
-      P.tempo=groove.bpm; P.loopA=0; P.loopB=totalSteps()/4-1;
+      groove=normaliser(parseQuick(byId("quick").value, byId("qTitle").value, +byId("qBpm").value));
+      P.tempo=groove.bpm; P.loopA=0; P.loopB=nbBeats()-1;
       persist(); renderAll(); toast("Groove importé : "+groove.title);
     }catch(err){ toast("⚠ "+err); }
   };
@@ -1029,7 +1151,7 @@ function bindIO(){
       const g=JSON.parse(byId("json").value);
       if(!g.measures||!g.measures.length) throw "JSON sans mesures";
       pushUndo();
-      groove=g; P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=totalSteps()/4-1;
+      groove=normaliser(g); P.tempo=g.bpm||90; P.swing=g.swing||50; P.loopA=0; P.loopB=nbBeats()-1;
       persist(); renderAll(); toast("JSON chargé");
     }catch(err){ toast("⚠ "+err); }
   };
